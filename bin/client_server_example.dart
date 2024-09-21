@@ -57,6 +57,7 @@ Future<void> _server() async {
 }
 
 Future<void> _client() async {
+  print('waiting...');
   final client = socket_io_client.io('http://localhost:3000', <String, dynamic>{
     'transports': ['websocket'],
   });
