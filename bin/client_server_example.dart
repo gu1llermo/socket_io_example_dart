@@ -16,7 +16,7 @@ Future<void> main(List<String> args) async {
   if (args.first == "c") _client();
 }
 
-StreamSubscription<String>? streamSubscription;
+StreamSubscription<String>? _streamSubscription;
 
 Future<void> _server() async {
   final server = Server();
@@ -46,7 +46,7 @@ Future<void> _server() async {
 
   server.listen(3000);
 
-  streamSubscription =
+  _streamSubscription =
       readline().listen((String line) => server.emit('msg', line));
   // puedo hacer esto porque lo está utilizando un solo subscritor a la vez
   // pero en caso que el mismo stream lo necesiten dos susbcritores a la vez
@@ -65,7 +65,7 @@ Future<void> _client() async {
   client.onConnect((_) {
     print('Connected');
 
-    streamSubscription = readline().listen((String line) {
+    _streamSubscription = readline().listen((String line) {
       client.emit('stream', line);
     });
   });
@@ -73,7 +73,7 @@ Future<void> _client() async {
   client.onDisconnect((_) {
     print('Se ha desconectado del servidor');
 
-    streamSubscription?.cancel();
+    _streamSubscription?.cancel();
     client.dispose();
   });
 
