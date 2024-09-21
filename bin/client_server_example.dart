@@ -29,7 +29,7 @@ Future<void> _server() async {
     client.broadcast.emit("msg", 'El id: $id se ha unido a la sala');
 
     client.on('stream', (data) {
-      print('$id dice: $data');
+      print('$id: $data');
     });
 
     client.on(
@@ -87,4 +87,4 @@ Stream<String> readline() =>
 // Stream<String> readline() =>
 //     stdin.transform(utf8.decoder).transform(const LineSplitter());
 
-void _printFromServer(String message) => print(message);
+void _printFromServer(String message) => print('server: $message');
