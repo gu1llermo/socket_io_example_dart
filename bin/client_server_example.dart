@@ -5,32 +5,14 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io_client;
 import 'package:socket_io/socket_io.dart';
 
 void main(List<String> args) {
-  // if (args.isEmpty) {
-  //   print("No args passed");
-  //   print("Usage:");
-  //   print("Server: dart bin/client_server_example.dart s");
-  //   print("Client: dart bin/client_server_example.dart c");
-  //   return;
-  // }
-  // if (args.first == "s") _server();
-  // if (args.first == "c") _client();
-  auto();
+  _initStreamSubscription();
+
+  _initClient();
 }
 
 List<String> clientsId = []; // el único que no tiene id es el server
 String? myId;
 
-Future<void> auto() async {
-  try {
-    await _initServer();
-    Timer(Duration(seconds: 1), () => print('Soy el server'));
-  } on SocketException {
-    await _initClient();
-    Timer(Duration(seconds: 1), () => print('Soy Cliente!!!'));
-  }
-}
-
-StreamSubscription<String>? _streamSubscription;
 Server? _server;
 socket_io_client.Socket? _client;
 
@@ -68,28 +50,17 @@ Future<void> _initServer() async {
   });
 
   await _server!.listen(3000);
-
-  _initStreamSubscription();
-
-  // _streamSubscription =
-  //     readlineServer().listen((String line) => _server!.emit('msg', line));
-  // puedo hacer esto porque lo está utilizando un solo subscritor a la vez
-  // pero en caso que el mismo stream lo necesiten dos susbcritores a la vez
-  // allí creo que puede originar un error, y se necesiatn stremController
-  // el tema es que la entrada del teclado me genera es un stream, entonces
-  // en éste caso en específico sería así
-  // porque
 }
 
 void _initStreamSubscription() {
-  if (_server != null) {
-    _streamSubscription =
-        readlineServer().listen((String line) => _server!.emit('msg', line));
-  }
-  if (_client != null) {
-    _streamSubscription =
-        readlineServer().listen((String line) => _client!.emit('stream', line));
-  }
+  readlineServer().listen((String line) {
+    if (_server != null) {
+      _server!.emit('msg', line);
+    }
+    if (_client != null) {
+      _client!.emit('stream', line);
+    }
+  });
 }
 
 void _setupClient() {
@@ -111,35 +82,22 @@ Future<void> _initClient() async {
     print('Connected');
 
     myId = _client!.id;
-
-    _initStreamSubscription();
-
-    // _streamSubscription =
-    //     readlineServer().listen((String line) => _client!.emit('stream', line));
   });
 
   _client!.onDisconnect((_) async {
     print('Se ha desconectado del servidor');
-    await _streamSubscription?.cancel();
-    _client!.dispose();
 
     final firstClient = clientsId.first;
-    //print('firstClientId= $firstClient');
     if (firstClient == myId) {
-      print('Sí soy el primer clientId');
-      clientsId.clear();
-      myId = null;
+      // print('Sí soy el primer clientId');
+      clientsId.clear(); // para que registre nuevos clientesIds
+
       _client!.dispose();
+      _client = null;
 
-      print('Uno');
-      await _streamSubscription?.cancel();
-      print('Dos');
-
-      Timer(Duration(seconds: 1), () {
-        auto();
-      });
+      _initServer();
     } else {
-      //Timer(Duration(seconds: 3), () => auto);
+      // no hace nada aquí
     }
   });
 
@@ -152,12 +110,44 @@ Future<void> _initClient() async {
     print('Actualicé mi lista de ids');
     print(clientsId);
   });
+  setupOtrosListeners();
+}
+
+void setupOtrosListeners() {
+  _client!.on('connect_error', (data) {
+    if (clientsId.isEmpty) {
+      // entonces está iniciando la app
+      _client!.dispose();
+      _client = null;
+
+      _initServer();
+    } else {
+      // todo
+      // ya había clientes conectados antes de mí, no soy el primero
+      // entonces tengo que ir rotando entre las diferentes direcciones ip
+      // para volverme a reconectar
+      // en éste caso de localhost no espero que pase por aqui, pero sí en el caso
+      // que sean dispositivos diferntes conectados a una misma red lan
+      print('connect_error: $data');
+    }
+  });
+  _client!.on('connect_timeout', (data) => print('connect_timeout: $data'));
+  _client!.on('error', (data) => print('error: $data'));
+  _client!.on('reconnect_attempt', (data) {
+    if (data == 1) {
+      print('Primera reconexión');
+    } else {
+      print('Intento de reconexión nro: $data');
+    }
+    //print('reconnect_attempt: $data');
+  });
+  // _client!.on('reconnecting', (data) => print('reconnecting: $data'));
+  _client!.on('reconnect_error', (data) => print('reconnect_error: $data'));
+  _client!.on('reconnect_failed', (data) => print('reconnect_failed: $data'));
 }
 
 Stream<String> readlineServer() =>
     stdin.transform(latin1.decoder).transform(const LineSplitter());
-// Stream<String> readlineClient() =>
-//     stdin.transform(latin1.decoder).transform(const LineSplitter());
 
 // Stream<String> readline() =>
 //     stdin.transform(utf8.decoder).transform(const LineSplitter());
