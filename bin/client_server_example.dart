@@ -4,16 +4,27 @@ import 'dart:io';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io_client;
 import 'package:socket_io/socket_io.dart';
 
-Future<void> main(List<String> args) async {
-  if (args.isEmpty) {
-    print("No args passed");
-    print("Usage:");
-    print("Server: dart bin/client_server_example.dart s");
-    print("Client: dart bin/client_server_example.dart c");
-    return;
+void main(List<String> args) {
+  // if (args.isEmpty) {
+  //   print("No args passed");
+  //   print("Usage:");
+  //   print("Server: dart bin/client_server_example.dart s");
+  //   print("Client: dart bin/client_server_example.dart c");
+  //   return;
+  // }
+  // if (args.first == "s") _server();
+  // if (args.first == "c") _client();
+  auto();
+}
+
+Future<void> auto() async {
+  try {
+    await _server();
+    Timer(Duration(seconds: 1), () => print('Soy el server'));
+  } on SocketException {
+    await _client();
+    Timer(Duration(seconds: 1), () => print('Soy Cliente!!!'));
   }
-  if (args.first == "s") _server();
-  if (args.first == "c") _client();
 }
 
 StreamSubscription<String>? _streamSubscription;
@@ -43,8 +54,7 @@ Future<void> _server() async {
       client.emit('msg', 'Hi!, from server');
     });
   });
-
-  server.listen(3000);
+  await server.listen(3000);
 
   _streamSubscription =
       readline().listen((String line) => server.emit('msg', line));
@@ -57,7 +67,6 @@ Future<void> _server() async {
 }
 
 Future<void> _client() async {
-  print('waiting...');
   final client = socket_io_client.io('http://localhost:3000', <String, dynamic>{
     'transports': ['websocket'],
   });
