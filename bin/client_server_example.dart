@@ -44,7 +44,7 @@ Future<void> _server() async {
     });
   });
 
-  server.listen(3000);
+  await server.listen(3000);
 
   _streamSubscription =
       readline().listen((String line) => server.emit('msg', line));
